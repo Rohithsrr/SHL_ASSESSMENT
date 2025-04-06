@@ -1,11 +1,8 @@
 import streamlit as st
-from flask import Flask, request, jsonify
 import pandas as pd
 import google.generativeai as genai
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import threading
-import os
 import json
 
 # Configure Gemini API
@@ -99,21 +96,6 @@ def recommend_assessments(query, max_duration=None, top_k=10):
         st.warning("No recommendations available. Check data or try a different query.")
     return recommendations[["name", "url", "remote_testing", "adaptive_irt", "duration", "test_type"]]
 
-# Flask app for API
-flask_app = Flask(__name__)
-
-@flask_app.route("/recommend", methods=["GET"])
-def get_recommendations():
-    query = request.args.get("query", "")
-    max_duration = request.args.get("max_duration", type=int)
-    top_k = request.args.get("top_k", default=10, type=int)
-
-    if not query:
-        return jsonify({"error": "Query parameter is required"}), 400
-
-    results = recommend_assessments(query, max_duration, top_k)
-    return jsonify(results.to_dict(orient="records"))
-
 # Streamlit UI
 def run_streamlit():
     st.title("SHL Assessment Recommendation System")
@@ -135,14 +117,5 @@ def run_streamlit():
         results = recommend_assessments(query, max_duration if max_duration > 0 else None)
         st.json(results.to_dict(orient="records"))
 
-# Run Flask in a separate thread
-def run_flask():
-    flask_app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
-
 if __name__ == "__main__":
-    # Start Flask in a background thread
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-
-    # Run Streamlit
     run_streamlit()
